@@ -95,6 +95,8 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .brand b{font-family:var(--f-display);font-size:1.55rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
 .brand b em{font-style:italic;text-transform:none;letter-spacing:0;font-weight:500}
 .top-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.linkbtn{all:unset;cursor:pointer;text-decoration:underline;font-weight:600}
+.linkbtn:focus-visible{outline:2px solid var(--accent)}
 .mode{font-size:.78rem;padding:4px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
 #currency{width:auto;background:var(--surface)}
 
@@ -513,10 +515,97 @@ async function init() {
       if (loaded) purgeExamples();
     }, err => { clearTimeout(t); setNotice("La connexion à tes données s'est coupée (" + esc(err.code) + "). Recharge la page pour la rétablir."); });
     store = { put: (k, o) => col.doc(k).set(o), del: k => col.doc(k).delete(), putSettings: o => col.doc("settings").set(o) };
+  } else if (SB_URL && SB_KEY && !window.claude) {
+    await initSupabase(); return;
   } else {
     S.mode = "local"; store = localStore(); S.ready = true; buildView(); renderData(); purgeExamples();
   }
   $("#mode").textContent = S.mode === "cloud" ? "Enregistré dans ton compte" : "Enregistré dans ce navigateur";
+}
+
+/* ---------- Supabase (GitHub / Vercel version): accounts + real database ---------- */
+const SB_URL = "";   // ex. https://xxxx.supabase.co
+const SB_KEY = "";   // clé publique "anon" (sans danger côté navigateur, protégée par les règles RLS)
+const loadScript = src => new Promise((res, rej) => { const el = document.createElement("script"); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
+async function fetchAll(make) {
+  const out = []; let from = 0;
+  for (;;) { const {data, error} = await make().range(from, from + 999); if (error) throw error; out.push(...data); if (data.length < 1000) return out; from += 1000; }
+}
+async function initSupabase() {
+  S.mode = "sb"; $("#mode").textContent = "Connexion…";
+  try { await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"); }
+  catch (e) { setNotice("La base de données ne répond pas. Vérifie ta connexion internet puis recharge la page."); S.mode = "local"; store = localStore(); S.ready = true; buildView(); renderData(); return; }
+  const sb = S.sb = window.supabase.createClient(SB_URL, SB_KEY, {auth: {persistSession: true, autoRefreshToken: true}});
+  sb.auth.onAuthStateChange((ev, session) => {
+    if (session && session.user && !S.user) setTimeout(() => onSignedIn(session.user), 0);
+    if (ev === "SIGNED_OUT") { S.user = null; S.shops = {}; S.ai = {}; S.chat = {}; S.ready = true; renderMode(); swap("auth"); }
+  });
+  const {data} = await sb.auth.getSession();
+  if (data.session) await onSignedIn(data.session.user);
+  else { S.ready = true; renderMode(); buildView(); renderData(); }
+}
+let signingIn = false;
+async function onSignedIn(user) {
+  if (S.user || signingIn) return; signingIn = true;
+  const sb = S.sb;
+  try {
+    const [shops, entries, set] = await Promise.all([
+      fetchAll(() => sb.from("shops").select("id,name,act,goal,created").order("created")),
+      fetchAll(() => sb.from("entries").select("id,shop_id,t,a,o,d,c,n").order("d")),
+      sb.from("settings").select("currency").maybeSingle(),
+    ]);
+    S.user = user; S.shops = {}; synced = {};
+    for (const r of shops) S.shops[r.id] = {kind:"shop", name:r.name, act:r.act || "", goal:Number(r.goal) || 0, created:new Date(r.created).getTime(), entries:[]};
+    for (const e of entries) { const sh = S.shops[e.shop_id]; if (sh) sh.entries.push({id:e.id, t:e.t, a:Number(e.a), o:e.o || 0, d:e.d, c:e.c || "", n:e.n || ""}); }
+    for (const id in S.shops) synced[id] = {sig: shopSig(id, S.shops[id]), ids: new Set(S.shops[id].entries.map(e => e.id))};
+    if (set.data && set.data.currency) S.settings.currency = set.data.currency;
+    store = sbStore(sb);
+  } catch (e) { setNotice("Impossible de charger tes données (" + esc(e.message || e.code || "erreur") + "). Recharge la page."); signingIn = false; return; }
+  signingIn = false; S.ready = true; renderMode();
+  if (S.view === "auth") swap("overview"); else { buildView(); renderData(); }
+}
+let synced = {};
+const shopSig = (id, o) => JSON.stringify([o.name, o.act || "", Number(o.goal) || 0, o.created || 0]);
+function sbStore(sb) {
+  const uidv = () => S.user.id;
+  const chunks = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
+  const ok = r => { if (r.error) throw {code: r.error.code || "db", message: r.error.message}; return r; };
+  return {
+    async put(id, o) {
+      const prev = synced[id]; const sig = shopSig(id, o);
+      if (!prev || prev.sig !== sig) ok(await sb.from("shops").upsert({id, user_id: uidv(), name: o.name, act: o.act || "", goal: Number(o.goal) || 0, created: new Date(o.created || Date.now()).toISOString()}));
+      const now = new Set(o.entries.map(e => e.id)); const old = prev ? prev.ids : new Set();
+      const add = o.entries.filter(e => !old.has(e.id)).map(e => ({id: e.id, user_id: uidv(), shop_id: id, t: e.t, a: e.a, o: e.o || 0, d: e.d, c: e.c || "", n: e.n || ""}));
+      const del = [...old].filter(x => !now.has(x));
+      for (const c of chunks(add, 500)) ok(await sb.from("entries").insert(c));
+      for (const c of chunks(del, 200)) ok(await sb.from("entries").delete().in("id", c));
+      synced[id] = {sig, ids: now};
+    },
+    async del(id) { ok(await sb.from("shops").delete().eq("id", id)); delete synced[id]; },
+    async putSettings(o) { ok(await sb.from("settings").upsert({user_id: uidv(), currency: o.currency})); },
+  };
+}
+function renderMode() {
+  const m = $("#mode");
+  if (S.mode !== "sb") return;
+  m.innerHTML = S.user ? `${esc(S.user.email || "Connecté")} · <button type="button" class="linkbtn" data-act="logout">Se déconnecter</button>` : "Non connecté";
+}
+async function authSubmit(mode) {
+  const email = $("#au-email").value.trim(), pw = $("#au-pw").value, msg = $("#au-msg");
+  if (!email || pw.length < 6) { msg.className = "down"; msg.textContent = "Entre ton e-mail et un mot de passe d'au moins 6 caractères."; return; }
+  msg.className = "muted"; msg.textContent = mode === "signup" ? "Création du compte…" : "Connexion…";
+  document.querySelectorAll("#auth-form button").forEach(b => b.disabled = true);
+  const r = mode === "signup" ? await S.sb.auth.signUp({email, password: pw, options: {emailRedirectTo: location.origin + location.pathname}}) : await S.sb.auth.signInWithPassword({email, password: pw});
+  document.querySelectorAll("#auth-form button").forEach(b => b.disabled = false);
+  if (r.error) {
+    const t = r.error.message || "";
+    msg.className = "down";
+    msg.textContent = /invalid login/i.test(t) ? "E-mail ou mot de passe incorrect." : /not confirmed/i.test(t) ? "Confirme d'abord ton adresse avec le lien reçu par e-mail." : /already registered/i.test(t) ? "Un compte existe déjà avec cet e-mail : connecte-toi." : "Ça n'a pas marché : " + t;
+    return;
+  }
+  if (mode === "signup" && !r.data.session) { msg.className = "muted"; msg.textContent = "Compte créé. Ouvre le lien reçu par e-mail pour le confirmer, puis connecte-toi."; return; }
+  msg.textContent = "";
+  if (r.data.user) onSignedIn(r.data.user);
 }
 
 /* ---------- actions ---------- */
@@ -537,7 +626,7 @@ function purgeExamples() {
   if (purged) return; purged = true;
   for (const id of Object.keys(S.shops)) if (S.shops[id].example) save(id, null);
 }
-function swap(view) { S.view = view; S.confirm = null; buildView(); renderData(); window.scrollTo({top:0, behavior:"auto"}); }
+function swap(view) { if (S.mode === "sb" && !S.user && view !== "home") view = "auth"; S.view = view; S.confirm = null; buildView(); renderData(); window.scrollTo({top:0, behavior:"auto"}); }
 const viewLabel = v => v === "home" ? "Accueil" : v === "overview" ? "Vue d'ensemble" : v === "new" ? "Nouvelle boutique" : (S.shops[v]?.name || "Boutique");
 const letters = t => [...t].map((c, i) => `<span class="ch" style="--i:${i}">${c === " " ? "&nbsp;" : esc(c)}</span>`).join("");
 let transitioning = false;
@@ -634,7 +723,7 @@ const cnt = (v, kind, pre) => `<span data-count="${Number(v) || 0}" data-kind="$
 
 /* ---------- nav ---------- */
 function renderNav() {
-  const nav = $("#nav"); nav.hidden = S.view === "home";
+  const nav = $("#nav"); nav.hidden = S.view === "home" || S.view === "auth";
   const items = [["overview", "Vue d'ensemble"], ...shopIds().map(id => [id, S.shops[id].name]), ["new", "+ Nouvelle boutique"]];
   const sig = items.map(i => i.join(":")).join("|");
   if (nav.dataset.sig !== sig) {
@@ -676,6 +765,22 @@ function buildView() {
   const m = $("#main"); if (!S.ready) return;
   S.enter = true;
   for (const k in stacks) { clearInterval(stacks[k].timer); delete stacks[k]; }
+  if (S.view === "auth") {
+    m.innerHTML = `<section class="home"><div>
+        <div class="eyebrow reveal" style="--d:.05s">Ton espace Kanri</div>
+        <h1 class="home-title"><span class="line"><span style="--d:.15s">Bon retour,</span></span><span class="line"><span style="--d:.28s"><em>connecte</em>-toi.</span></span></h1>
+        <p class="lead reveal" style="--d:.5s">Tes boutiques et tes ventes sont enregistrées dans ton compte : tu les retrouves sur ton téléphone comme sur ton ordinateur. Personne d'autre ne peut les voir.</p></div>
+      <form class="panel newshop reveal" id="auth-form" style="--d:.6s">
+        <h3>Connexion</h3>
+        <div class="field"><label for="au-email">E-mail</label><input id="au-email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="au-pw">Mot de passe (6 caractères minimum)</label><input id="au-pw" type="password" autocomplete="current-password" minlength="6" required></div>
+        <div class="row"><button class="btn primary" type="submit">Se connecter</button><button class="btn" type="button" id="au-signup">Créer un compte</button></div>
+        <p id="au-msg" class="muted" style="margin:0;font-size:.88rem" aria-live="polite"></p>
+      </form></section>`;
+    $("#auth-form").addEventListener("submit", e => { e.preventDefault(); authSubmit("signin"); });
+    $("#au-signup").addEventListener("click", () => authSubmit("signup"));
+    return;
+  }
   if (S.view === "home") {
     const now = today0();
     m.innerHTML = `<section class="home">
@@ -1097,7 +1202,8 @@ document.addEventListener("click", e => {
   const a = e.target.closest("[data-act]");
   if (a) {
     const act = a.dataset.act;
-    if (act === "ask-del") { S.confirm = "shop"; renderShop(); }
+    if (act === "logout") { if (S.sb) S.sb.auth.signOut(); }
+    else if (act === "ask-del") { S.confirm = "shop"; renderShop(); }
     else if (act === "cancel") { S.confirm = null; renderShop(); }
     else if (act === "del-shop") { const id = S.view; delete S.ai[id]; delete S.chat[id]; S.view = "overview"; buildView(); save(id, null); }
     return;
