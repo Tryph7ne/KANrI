@@ -175,6 +175,32 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .pager[data-tone="light"] button{background:#6F050D}
 @media (max-width:760px){.pager{display:none}}
 
+/* login: ink stage (single deliberate dark look) */
+.ink-stage{position:relative;width:100vw;margin-left:calc(50% - 50vw);min-height:calc(100svh - 110px);display:flex;align-items:center;background:#0F0A0A;color:#F5ECE2;overflow:clip;isolation:isolate;
+  --ink:#F5ECE2;--muted:#B9A7A0;--line:rgba(245,236,226,.16);--bg:#140C0C;--surface:rgba(20,12,12,.72);--accent:#B3C1DE;--k1:#8A0A14;--k1-ink:#F7EDC4;color-scheme:dark}
+.ink-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;filter:url(#ink-goo);pointer-events:none}
+.ink-words{position:absolute;left:0;right:0;bottom:-.12em;z-index:0;display:flex;justify-content:space-between;padding-inline:max(16px,env(safe-area-inset-left,0px));font-family:var(--f-body);font-weight:900;font-size:clamp(4rem,14vw,12rem);letter-spacing:-.05em;line-height:1;color:rgba(245,236,226,.05);pointer-events:none}
+.ink-in{position:relative;z-index:1;width:100%;max-width:1180px;margin:0 auto;padding:48px max(16px,env(safe-area-inset-right,0px)) 72px max(16px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:32px;align-items:center;pointer-events:none}
+.ink-in>*{pointer-events:auto}
+.ink-copy{pointer-events:none}
+@media (max-width:860px){.ink-in{grid-template-columns:minmax(0,1fr);padding-top:28px}}
+.ink-title{font-family:var(--f-body);font-weight:900;text-transform:uppercase;font-size:clamp(2.6rem,8vw,6.4rem);line-height:.9;letter-spacing:-.04em;margin:8px 0 0;color:#F5ECE2;mix-blend-mode:difference}
+.ink-title em{font-family:var(--f-display);font-style:italic;font-weight:500;text-transform:none;letter-spacing:-.01em}
+.ink-copy .lead{color:#D9CBC3;max-width:42ch;margin:16px 0 0;text-shadow:0 1px 12px rgba(0,0,0,.6)}
+.ink-hint{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#B9A7A0;margin:18px 0 0}
+@media (pointer:coarse){.ink-hint{display:none}}
+.ink-form{display:flex;flex-direction:column;gap:12px;background:rgba(18,10,10,.78);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(245,236,226,.14);border-radius:22px;padding:22px;box-shadow:0 30px 60px -30px rgba(0,0,0,.8)}
+.ink-form input{background:rgba(245,236,226,.06);border-color:rgba(245,236,226,.18);color:#F5ECE2}
+.ink-form .btn.primary{background:#F5ECE2;border-color:#F5ECE2;color:#2B0A0C;width:100%}
+.ink-tabs{display:flex;background:rgba(245,236,226,.07);border-radius:99px;padding:4px;gap:4px}
+.ink-tabs button{all:unset;flex:1;text-align:center;cursor:pointer;padding:8px 10px;border-radius:99px;font-weight:600;font-size:.9rem;color:#B9A7A0;transition:background .3s,color .3s}
+.ink-tabs button[aria-selected="true"]{background:#F5ECE2;color:#2B0A0C}
+.ink-tabs button:focus-visible{outline:2px solid #B3C1DE}
+.au-switch{margin:0;font-size:.88rem;color:#B9A7A0;text-align:center}
+.au-msg{margin:0;font-size:.88rem;color:#D9CBC3;min-height:1.2em}
+.au-msg.down{color:#FFB7A6}
+.swap-in{animation:fadeup .5s cubic-bezier(.16,1,.3,1) both}
+
 /* home */
 .home{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:center;min-height:min(78vh,760px);padding-block:10px 30px}
 @media (max-width:860px){.home{grid-template-columns:minmax(0,1fr);min-height:0}}
@@ -380,6 +406,7 @@ h3{font-size:1.3rem;font-weight:600}
   <div id="notice" class="notice" hidden></div>
   <main id="main"><div class="loading">Chargement de tes boutiques…</div></main>
 </div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="ink-goo"><feGaussianBlur in="SourceGraphic" stdDeviation="9" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"/></filter></svg>
 <nav class="pager" id="pager" aria-label="Sections" hidden></nav>
 <div class="veil b" id="veil-b" hidden></div>
 <div class="veil a" id="veil-a" hidden><div class="veil-m" id="veil-m"></div><div class="veil-txt" id="veil-txt"></div></div>
@@ -588,24 +615,148 @@ function sbStore(sb) {
 function renderMode() {
   const m = $("#mode");
   if (S.mode !== "sb") return;
-  m.innerHTML = S.user ? `${esc(S.user.email || "Connecté")} · <button type="button" class="linkbtn" data-act="logout">Se déconnecter</button>` : "Non connecté";
+  const who = S.user ? ((S.user.user_metadata && S.user.user_metadata.full_name) || S.user.email || "Connecté") : "";
+  m.innerHTML = S.user ? `${esc(who)} · <button type="button" class="linkbtn" data-act="logout">Se déconnecter</button>` : "Non connecté";
 }
-async function authSubmit(mode) {
-  const email = $("#au-email").value.trim(), pw = $("#au-pw").value, msg = $("#au-msg");
-  if (!email || pw.length < 6) { msg.className = "down"; msg.textContent = "Entre ton e-mail et un mot de passe d'au moins 6 caractères."; return; }
-  msg.className = "muted"; msg.textContent = mode === "signup" ? "Création du compte…" : "Connexion…";
-  document.querySelectorAll("#auth-form button").forEach(b => b.disabled = true);
-  const r = mode === "signup" ? await S.sb.auth.signUp({email, password: pw, options: {emailRedirectTo: location.origin + location.pathname}}) : await S.sb.auth.signInWithPassword({email, password: pw});
-  document.querySelectorAll("#auth-form button").forEach(b => b.disabled = false);
-  if (r.error) {
-    const t = r.error.message || "";
-    msg.className = "down";
-    msg.textContent = /invalid login/i.test(t) ? "E-mail ou mot de passe incorrect." : /not confirmed/i.test(t) ? "Confirme d'abord ton adresse avec le lien reçu par e-mail." : /already registered/i.test(t) ? "Un compte existe déjà avec cet e-mail : connecte-toi." : "Ça n'a pas marché : " + t;
-    return;
+let coolUntil = 0, coolTimer = null;
+function authMsg(text, bad) { const msg = $("#au-msg"); if (msg) { msg.className = bad ? "au-msg down" : "au-msg"; msg.textContent = text; } }
+function authBusy(on) { document.querySelectorAll("#auth-form button, #auth-form input").forEach(b => b.disabled = on); }
+function cooldown(sec) {
+  coolUntil = Date.now() + sec * 1000; clearInterval(coolTimer);
+  const tick = () => {
+    const left = Math.ceil((coolUntil - Date.now()) / 1000);
+    const btn = document.querySelector("#auth-form button[type=submit]");
+    if (left <= 0) { clearInterval(coolTimer); if (btn) btn.disabled = false; authMsg("Tu peux réessayer maintenant."); return; }
+    if (btn) btn.disabled = true;
+    authMsg(`Par sécurité, attends encore ${left} s avant de réessayer. Si tu viens de créer ton compte, regarde d'abord ta boîte mail.`, true);
+  };
+  tick(); coolTimer = setInterval(tick, 1000);
+}
+function authError(t) {
+  const wait = /after (\d+) seconds?/i.exec(t);
+  if (wait) { cooldown(+wait[1]); return; }
+  authMsg(/invalid login/i.test(t) ? "E-mail ou mot de passe incorrect."
+    : /not confirmed/i.test(t) ? "Ton adresse n'est pas encore confirmée : ouvre le lien reçu par e-mail (pense aux spams), puis connecte-toi."
+    : /already registered|already exists/i.test(t) ? "Un compte existe déjà avec cet e-mail. Connecte-toi."
+    : /rate limit/i.test(t) ? "Trop d'e-mails envoyés pour le moment. Regarde ta boîte mail (et les spams) : le premier e-mail est sans doute déjà arrivé. Sinon, réessaie dans une heure."
+    : /password/i.test(t) ? "Mot de passe refusé : choisis-en un plus long, avec des lettres et des chiffres."
+    : /email/i.test(t) && /invalid/i.test(t) ? "Cette adresse e-mail n'est pas valide."
+    : "Ça n'a pas marché (" + t + "). Réessaie dans un instant.", true);
+}
+async function authSubmit() {
+  if (Date.now() < coolUntil) return;
+  const mode = S.authMode;
+  const name = mode === "signup" ? $("#au-name").value.trim() : "";
+  const email = $("#au-email").value.trim(), pw = $("#au-pw").value;
+  if (mode === "signup" && !name) { authMsg("Entre ton nom.", true); $("#au-name").focus(); return; }
+  if (!/^\S+@\S+\.\S+$/.test(email)) { authMsg("Entre une adresse e-mail valide.", true); $("#au-email").focus(); return; }
+  if (pw.length < 6) { authMsg("Le mot de passe doit faire au moins 6 caractères.", true); $("#au-pw").focus(); return; }
+  authMsg(mode === "signup" ? "Création de ton compte…" : "Connexion…"); authBusy(true);
+  let r;
+  try {
+    r = mode === "signup"
+      ? await S.sb.auth.signUp({email, password: pw, options: {data: {full_name: name}, emailRedirectTo: location.origin + location.pathname}})
+      : await S.sb.auth.signInWithPassword({email, password: pw});
+  } catch (e) { r = {error: {message: "connexion impossible"}}; }
+  authBusy(false);
+  if (r.error) { authError(r.error.message || ""); return; }
+  if (mode === "signup") {
+    if (r.data.user && Array.isArray(r.data.user.identities) && r.data.user.identities.length === 0) { authMsg("Un compte existe déjà avec cet e-mail. Connecte-toi.", true); return; }
+    if (!r.data.session) { S.authMode = "signin"; renderAuthForm(email); authMsg(`Compte créé, ${name} ! Ouvre le lien envoyé à ${email} pour le confirmer (pense aux spams), puis connecte-toi ici.`); return; }
   }
-  if (mode === "signup" && !r.data.session) { msg.className = "muted"; msg.textContent = "Compte créé. Ouvre le lien reçu par e-mail pour le confirmer, puis connecte-toi."; return; }
-  msg.textContent = "";
+  authMsg("");
   if (r.data.user) onSignedIn(r.data.user);
+}
+function authFormHtml(prefill) {
+  const up = S.authMode === "signup";
+  return `<form class="ink-form" id="auth-form" novalidate>
+    <div class="ink-tabs" role="tablist">
+      <button type="button" role="tab" aria-selected="${!up}" data-act="auth-mode" data-mode="signin">Connexion</button>
+      <button type="button" role="tab" aria-selected="${up}" data-act="auth-mode" data-mode="signup">Créer un compte</button>
+    </div>
+    ${up ? `<div class="field"><label for="au-name">Ton nom</label><input id="au-name" autocomplete="name" maxlength="60" placeholder="Ex. Cyndi"></div>` : ""}
+    <div class="field"><label for="au-email">E-mail</label><input id="au-email" type="email" autocomplete="email" value="${esc(prefill || "")}"></div>
+    <div class="field"><label for="au-pw">Mot de passe${up ? " (6 caractères minimum)" : ""}</label><input id="au-pw" type="password" autocomplete="${up ? "new-password" : "current-password"}" minlength="6"></div>
+    <button class="btn primary big" type="submit">${up ? "Créer mon compte" : "Se connecter"} <span class="arr">→</span></button>
+    <p class="au-switch">${up ? `Déjà un compte ? <button type="button" class="linkbtn" data-act="auth-mode" data-mode="signin">Se connecter</button>` : `Pas encore de compte ? <button type="button" class="linkbtn" data-act="auth-mode" data-mode="signup">Créer un compte</button>`}</p>
+    <p id="au-msg" class="au-msg" aria-live="polite"></p>
+  </form>`;
+}
+function renderAuthForm(prefill) {
+  const old = $("#auth-form"); if (!old) return;
+  const keep = prefill ?? ($("#au-email") ? $("#au-email").value : "");
+  old.outerHTML = authFormHtml(keep);
+  const f = $("#auth-form"); f.classList.add("swap-in");
+  f.addEventListener("submit", e => { e.preventDefault(); authSubmit(); });
+  if (Date.now() < coolUntil) cooldown(Math.ceil((coolUntil - Date.now()) / 1000));
+  const first = S.authMode === "signup" ? $("#au-name") : (keep ? $("#au-pw") : $("#au-email"));
+  if (first && matchMedia("(pointer:fine)").matches) first.focus();
+}
+
+/* ---------- ink reveal (login page): the cursor spills ink that uncovers the picture underneath ---------- */
+const LOGIN_BG = "";   // adresse d'une image (même site) pour remplacer le paysage dessiné
+let inkStop = null;
+function paintScene(c, W, H) {
+  const g = c.getContext("2d");
+  const sky = g.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#5E6F9C"); sky.addColorStop(.38, "#96A6C9"); sky.addColorStop(.66, "#EBC9C0"); sky.addColorStop(.82, "#F7EDC4"); sky.addColorStop(1, "#F2D6B8");
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  const sx = W * .68, sy = H * .6, sr = Math.min(W, H) * .11;
+  const glow = g.createRadialGradient(sx, sy, sr * .2, sx, sy, sr * 4.5);
+  glow.addColorStop(0, "rgba(255,244,214,.95)"); glow.addColorStop(.25, "rgba(247,214,190,.55)"); glow.addColorStop(1, "rgba(247,214,190,0)");
+  g.fillStyle = glow; g.fillRect(0, 0, W, H);
+  g.fillStyle = "#FFF6DD"; g.beginPath(); g.arc(sx, sy, sr, 0, Math.PI * 2); g.fill();
+  g.fillStyle = "rgba(255,255,255,.35)";
+  for (let i = 0; i < 6; i++) { const cx = W * (.1 + i * .17), cy = H * (.16 + (i % 3) * .07); g.beginPath(); g.ellipse(cx, cy, W * .09, H * .022, 0, 0, Math.PI * 2); g.fill(); }
+  const hill = (base, amp, col, ph) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += 8) g.lineTo(x, H * base - Math.sin(x / W * Math.PI * 2.2 + ph) * H * amp - Math.sin(x / W * 9 + ph) * H * amp * .25); g.lineTo(W, H); g.closePath(); g.fill(); };
+  hill(.72, .05, "#B08AA0", 0.6); hill(.8, .06, "#8A3A55", 2.1); hill(.9, .045, "#6F050D", 4.2);
+  g.fillStyle = "rgba(43,10,12,.9)"; for (let i = 0; i < 70; i++) { const x = (i * 97.3) % W, h = H * (.02 + ((i * 37) % 10) / 260); g.fillRect(x, H - h - H * .02, 2, h); }
+}
+function startInk(stage, canvas) {
+  if (inkStop) inkStop();
+  const ctx = canvas.getContext("2d"), mask = document.createElement("canvas"), m = mask.getContext("2d"), bg = document.createElement("canvas");
+  let W = 0, H = 0, raf = 0, alive = true, last = null, lastMove = 0, t0 = performance.now(), photo = null;
+  const dpr = Math.min(1.5, devicePixelRatio || 1);
+  const drawBg = () => { const g = bg.getContext("2d"); if (photo) { const k = Math.max(W / photo.width, H / photo.height), w = photo.width * k, h = photo.height * k; g.drawImage(photo, (W - w) / 2, (H - h) / 2, w, h); } else paintScene(bg, W, H); };
+  const size = () => {
+    const r = stage.getBoundingClientRect(); W = Math.max(1, Math.round(r.width * dpr)); H = Math.max(1, Math.round(r.height * dpr));
+    for (const c of [canvas, mask, bg]) { c.width = W; c.height = H; }
+    drawBg();
+  };
+  if (LOGIN_BG) { const im = new Image(); im.onload = () => { photo = im; drawBg(); }; im.src = LOGIN_BG; }
+  const ro = new ResizeObserver(size); ro.observe(stage); size();
+  const blob = (x, y, r) => { m.beginPath(); m.arc(x, y, r, 0, Math.PI * 2); m.fill(); for (let i = 0; i < 3; i++) { const a = Math.random() * 6.28, d = r * (.4 + Math.random() * .6); m.beginPath(); m.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * (.35 + Math.random() * .4), 0, Math.PI * 2); m.fill(); } };
+  const stroke = (x, y) => {
+    const now = performance.now();
+    if (last) {
+      const dx = x - last.x, dy = y - last.y, dist = Math.hypot(dx, dy), r = Math.min(110, 42 + dist * .5) * dpr / 1.2, steps = Math.max(1, Math.ceil(dist / (r * .35)));
+      for (let i = 1; i <= steps; i++) blob(last.x + dx * i / steps, last.y + dy * i / steps, r);
+    } else blob(x, y, 50 * dpr);
+    last = {x, y}; lastMove = now;
+  };
+  const onMove = e => { const r = stage.getBoundingClientRect(); stroke((e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr); };
+  const onLeave = () => { last = null; };
+  stage.addEventListener("pointermove", onMove); stage.addEventListener("pointerleave", onLeave);
+  m.fillStyle = "#000";
+  const frame = now => {
+    if (!alive) return;
+    if (!document.body.contains(stage)) { stop(); return; }
+    m.globalCompositeOperation = "destination-out"; m.fillStyle = "rgba(0,0,0,.028)"; m.fillRect(0, 0, W, H);
+    m.globalCompositeOperation = "source-over"; m.fillStyle = "#000";
+    const el = now - t0;
+    if (el < 1800) { const p = el / 1800, e = 1 - Math.pow(1 - p, 3); blob(W * .62, H * .5, Math.min(W, H) * (.05 + .2 * e)); }
+    else if (now - lastMove > 1600) {
+      const k = now / 1000, x = W * (.6 + .22 * Math.sin(k * .7)), y = H * (.5 + .25 * Math.sin(k * 1.13 + 1));
+      if (last && now - lastMove > 3000) last = last; stroke(x, y); lastMove = now - 1700;
+    }
+    ctx.globalCompositeOperation = "source-over"; ctx.clearRect(0, 0, W, H); ctx.drawImage(bg, 0, 0);
+    ctx.globalCompositeOperation = "destination-in"; ctx.drawImage(mask, 0, 0);
+    raf = requestAnimationFrame(frame);
+  };
+  const stop = () => { alive = false; cancelAnimationFrame(raf); ro.disconnect(); stage.removeEventListener("pointermove", onMove); stage.removeEventListener("pointerleave", onLeave); if (inkStop === stop) inkStop = null; };
+  if (reduced) { requestAnimationFrame(() => { m.fillStyle = "#000"; blob(W * .62, H * .5, Math.min(W, H) * .3); ctx.drawImage(bg, 0, 0); ctx.globalCompositeOperation = "destination-in"; ctx.drawImage(mask, 0, 0); }); inkStop = () => { ro.disconnect(); inkStop = null; }; return; }
+  raf = requestAnimationFrame(frame);
+  inkStop = stop;
 }
 
 /* ---------- actions ---------- */
@@ -765,20 +916,25 @@ function buildView() {
   const m = $("#main"); if (!S.ready) return;
   S.enter = true;
   for (const k in stacks) { clearInterval(stacks[k].timer); delete stacks[k]; }
+  if (inkStop) inkStop();
   if (S.view === "auth") {
-    m.innerHTML = `<section class="home"><div>
-        <div class="eyebrow reveal" style="--d:.05s">Ton espace Kanri</div>
-        <h1 class="home-title"><span class="line"><span style="--d:.15s">Bon retour,</span></span><span class="line"><span style="--d:.28s"><em>connecte</em>-toi.</span></span></h1>
-        <p class="lead reveal" style="--d:.5s">Tes boutiques et tes ventes sont enregistrées dans ton compte : tu les retrouves sur ton téléphone comme sur ton ordinateur. Personne d'autre ne peut les voir.</p></div>
-      <form class="panel newshop reveal" id="auth-form" style="--d:.6s">
-        <h3>Connexion</h3>
-        <div class="field"><label for="au-email">E-mail</label><input id="au-email" type="email" autocomplete="email" required></div>
-        <div class="field"><label for="au-pw">Mot de passe (6 caractères minimum)</label><input id="au-pw" type="password" autocomplete="current-password" minlength="6" required></div>
-        <div class="row"><button class="btn primary" type="submit">Se connecter</button><button class="btn" type="button" id="au-signup">Créer un compte</button></div>
-        <p id="au-msg" class="muted" style="margin:0;font-size:.88rem" aria-live="polite"></p>
-      </form></section>`;
-    $("#auth-form").addEventListener("submit", e => { e.preventDefault(); authSubmit("signin"); });
-    $("#au-signup").addEventListener("click", () => authSubmit("signup"));
+    S.authMode = S.authMode || "signin";
+    m.innerHTML = `<section class="ink-stage" id="ink-stage">
+      <canvas class="ink-canvas" id="ink-canvas" aria-hidden="true"></canvas>
+      <div class="ink-words" aria-hidden="true"><span>kan</span><span>ri</span></div>
+      <div class="ink-in">
+        <div class="ink-copy">
+          <div class="eyebrow reveal" style="--d:.1s">Ton espace Kanri</div>
+          <h1 class="ink-title"><span class="line"><span style="--d:.2s">Tes ventes,</span></span><span class="line"><span style="--d:.34s"><em>à l'encre</em></span></span><span class="line"><span style="--d:.48s">de ton compte.</span></span></h1>
+          <p class="lead reveal" style="--d:.7s">Connecte-toi pour retrouver tes boutiques sur ton téléphone comme sur ton ordinateur. Personne d'autre ne peut les voir.</p>
+          <p class="ink-hint reveal" style="--d:.9s">Bouge la souris : l'encre révèle le paysage.</p>
+        </div>
+        <div class="reveal" style="--d:.55s">${authFormHtml("")}</div>
+      </div>
+    </section>`;
+    $("#auth-form").addEventListener("submit", e => { e.preventDefault(); authSubmit(); });
+    if (Date.now() < coolUntil) cooldown(Math.ceil((coolUntil - Date.now()) / 1000));
+    startInk($("#ink-stage"), $("#ink-canvas"));
     return;
   }
   if (S.view === "home") {
@@ -1202,6 +1358,7 @@ document.addEventListener("click", e => {
   const a = e.target.closest("[data-act]");
   if (a) {
     const act = a.dataset.act;
+    if (act === "auth-mode") { S.authMode = a.dataset.mode; renderAuthForm(); $("#au-msg") && authMsg(""); return; }
     if (act === "logout") { if (S.sb) S.sb.auth.signOut(); }
     else if (act === "ask-del") { S.confirm = "shop"; renderShop(); }
     else if (act === "cancel") { S.confirm = null; renderShop(); }
