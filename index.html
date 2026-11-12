@@ -97,7 +97,10 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .top-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .linkbtn{all:unset;cursor:pointer;text-decoration:underline;font-weight:600}
 .linkbtn:focus-visible{outline:2px solid var(--accent)}
-.mode{font-size:.78rem;padding:4px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.mode{font-size:.78rem;padding:4px 6px 4px 12px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--muted);display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:100%}
+.mode .who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600}
+.mode .lo{all:unset;flex:none;cursor:pointer;font-weight:600;font-size:.78rem;padding:3px 10px;border-radius:99px;background:var(--ink);color:var(--bg);white-space:nowrap}
+.mode .lo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #currency{width:auto;background:var(--surface)}
 
 /* tabs: "inflating text" — letters swell one after another; a morphing blob slides under the active tab */
@@ -320,7 +323,17 @@ input,select,textarea{background:var(--bg);border:1px solid var(--line);border-r
 .seg label:has(input:checked){background:var(--surface);color:var(--ink);box-shadow:0 2px 6px rgba(20,12,50,.12)}
 .seg label:has(input:focus-visible){outline:2px solid var(--accent)}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-@media (max-width:440px){.form-grid{grid-template-columns:minmax(0,1fr)}.mode{display:none}.hero-actions .btn{flex:1 1 auto}}
+@media (max-width:440px){.form-grid{grid-template-columns:minmax(0,1fr)}.hero-actions .btn{flex:1 1 auto}}
+/* header on phones: brand on top, then account + currency on one row */
+@media (max-width:600px){
+  header.top{gap:12px;margin-bottom:8px}
+  .top-right{width:100%;flex-wrap:nowrap;justify-content:space-between;gap:8px}
+  .cur-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  #currency{flex:0 0 auto;width:118px;padding:8px 8px;font-size:.82rem}
+  .ink-form{background:rgba(18,10,10,.94)}
+  .mode{flex:1 1 auto;min-width:0;font-size:.8rem;padding:7px 12px}
+  .mode .lo{padding:4px 10px}
+}
 @media (max-width:600px){.tab{font-size:1.2rem;padding:9px 15px 10px}.brand b{font-size:1.3rem}.scard{min-height:200px;padding:18px}.panel{padding:15px;border-radius:16px}.kpi .v{font-size:1.5rem}.chips .chip{font-size:.78rem}}
 .form-grid .full{grid-column:1/-1}
 
@@ -387,7 +400,7 @@ h3{font-size:1.3rem;font-weight:600}
     <button class="brand" type="button" data-go="home" aria-label="Accueil"><span class="mark" id="brand-mark" aria-hidden="true"></span><b>Kan<em>r</em>i</b></button>
     <div class="top-right">
       <span class="mode" id="mode">Chargement…</span>
-      <label class="label muted" for="currency">Devise</label>
+      <label class="label muted cur-label" for="currency">Devise</label>
       <select id="currency">
         <option value="€">Euro (€)</option>
         <option value="FCFA">Franc CFA (FCFA)</option>
@@ -616,7 +629,8 @@ function renderMode() {
   const m = $("#mode");
   if (S.mode !== "sb") return;
   const who = S.user ? ((S.user.user_metadata && S.user.user_metadata.full_name) || S.user.email || "Connecté") : "";
-  m.innerHTML = S.user ? `${esc(who)} · <button type="button" class="linkbtn" data-act="logout">Se déconnecter</button>` : "Non connecté";
+  const short = matchMedia("(max-width:600px)").matches ? who.split(/[\s@]/)[0] : who;
+  m.innerHTML = S.user ? `<span class="who" title="${esc(S.user.email || "")}">${esc(short)}</span><button type="button" class="lo" data-act="logout">Se déconnecter</button>` : `<span class="who">Non connecté</span>`;
 }
 let coolUntil = 0, coolTimer = null;
 function authMsg(text, bad) { const msg = $("#au-msg"); if (msg) { msg.className = bad ? "au-msg down" : "au-msg"; msg.textContent = text; } }
@@ -882,9 +896,10 @@ function renderNav() {
     nav.innerHTML = `<span class="tab-blob" aria-hidden="true"></span>` + items.map(([id, l]) =>
       `<button class="tab${id === "new" ? " add" : ""}" type="button" data-go="${esc(id)}"><span class="sr">${esc(l)}</span><span aria-hidden="true">${letters(l)}</span></button>`).join("");
   }
-  nav.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-current", String(b.dataset.go === S.view)));
+  nav.querySelectorAll(".tab").forEach(b => { b.setAttribute("aria-current", String(b.dataset.go === S.view)); if (tabRO) tabRO.observe(b); });
   moveBlob();
 }
+const tabRO = "ResizeObserver" in window ? new ResizeObserver(() => moveBlob()) : null;
 let blobAt = null;
 function moveBlob() {
   const nav = $("#nav"); const blob = nav.querySelector(".tab-blob"); if (!blob) return;
@@ -1055,7 +1070,7 @@ function setupSections() {
   if (reduced || !("IntersectionObserver" in window)) { secs.forEach(s => s.classList.add("in")); updatePager(); return; }
   secObs = new IntersectionObserver(list => list.forEach(en => {
     if (en.isIntersecting && !en.target.classList.contains("in")) { en.target.classList.add("in"); countUps(en.target); }
-  }), {threshold: .18});
+  }), {threshold: 0, rootMargin: "0px 0px -18% 0px"});
   const obs = secObs;
   setTimeout(() => { if (obs === secObs) secs.forEach(s => obs.observe(s)); }, transitioning ? 650 : 0);
   updatePager();
@@ -1063,7 +1078,11 @@ function setupSections() {
 function updatePager() {
   const secs = [...document.querySelectorAll("#main .sec")].filter(s => !s.hidden); const pager = $("#pager");
   if (!secs.length) return;
-  let act = 0; secs.forEach((s, i) => { if (s.getBoundingClientRect().top < innerHeight * .45) act = i; });
+  let act = 0; secs.forEach((s, i) => {
+    const top = s.getBoundingClientRect().top;
+    if (top < innerHeight * .45) act = i;
+    if (secObs && !s.classList.contains("in") && top < innerHeight * .82 && !transitioning) { s.classList.add("in"); countUps(s); }
+  });
   pager.querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === act));
   pager.dataset.tone = secs[act].classList.contains("s-red") ? "red" : secs[act].classList.contains("s-light") ? "light" : secs[act].classList.contains("s-blue") ? "blue" : "";
 }
