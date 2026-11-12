@@ -524,8 +524,8 @@ async function init() {
 }
 
 /* ---------- Supabase (GitHub / Vercel version): accounts + real database ---------- */
-const SB_URL = "";   // ex. https://xxxx.supabase.co
-const SB_KEY = "";   // clé publique "anon" (sans danger côté navigateur, protégée par les règles RLS)
+const SB_URL = "https://rcfhhmoyrsemicdzyljh.supabase.co";
+const SB_KEY = "sb_publishable_io1ooSD2W5PmZPK_lfZcGw_uEcnivnI";   // clé publique (sans danger côté navigateur, protégée par les règles RLS)
 const loadScript = src => new Promise((res, rej) => { const el = document.createElement("script"); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
 async function fetchAll(make) {
   const out = []; let from = 0;
@@ -533,7 +533,7 @@ async function fetchAll(make) {
 }
 async function initSupabase() {
   S.mode = "sb"; $("#mode").textContent = "Connexion…";
-  try { await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"); }
+  try { await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"); }
   catch (e) { setNotice("La base de données ne répond pas. Vérifie ta connexion internet puis recharge la page."); S.mode = "local"; store = localStore(); S.ready = true; buildView(); renderData(); return; }
   const sb = S.sb = window.supabase.createClient(SB_URL, SB_KEY, {auth: {persistSession: true, autoRefreshToken: true}});
   sb.auth.onAuthStateChange((ev, session) => {
