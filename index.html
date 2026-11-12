@@ -753,7 +753,7 @@ function buildView() {
       <div class="panel chart rv" id="v-chart" style="--d:.2s"></div>
       <div class="sec-mascot" aria-hidden="true">${mascot("wave")}</div>`, "sec-2")
       + sec(3, 4, "s-light", aiShell(S.view), "sec-3")
-      + sec(4, 4, "", `<h2 class="statement sm">${words("Ton *historique.*")}</h2>
+      + sec(4, 4, "s-blue", `<h2 class="statement sm">${words("Ton *historique.*")}</h2>
       <div class="panel rv" style="--d:.4s"><div class="row" style="justify-content:flex-end;margin-bottom:8px"><span class="muted" id="v-count" style="font-size:.85rem"></span></div><div class="table-wrap" id="v-table"></div></div>`, "sec-4");
     const f = $("#entry-form");
     f.addEventListener("change", e => { if (e.target.name === "t") { const dep = e.target.value === "depense"; $("#ef-o-wrap").hidden = dep; $("#ef-c-wrap").hidden = !dep; } });
