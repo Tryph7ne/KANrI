@@ -204,6 +204,21 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .au-msg.down{color:#FFB7A6}
 .swap-in{animation:fadeup .5s cubic-bezier(.16,1,.3,1) both}
 
+/* intro (first load of the home page): a ball bounces while the counter climbs, then swells to fill the screen */
+.intro{position:fixed;inset:0;z-index:130;background:#F7EDC4;display:grid;place-items:center;overflow:hidden}
+.intro-stage{position:relative;width:60px;height:84px}
+.intro-ball{position:absolute;left:50%;top:0;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:#6F050D;transform-origin:50% 100%;animation:ib .62s cubic-bezier(.45,0,.55,1) infinite alternate}
+@keyframes ib{0%{transform:translateY(0) scale(.92,1.08)}80%{transform:translateY(52px) scale(1)}100%{transform:translateY(56px) scale(1.3,.72)}}
+.intro-line{position:absolute;left:50%;bottom:0;width:40px;height:2px;margin-left:-20px;background:#2B0A0C;border-radius:2px}
+.intro-count{position:absolute;left:0;right:0;bottom:max(34px,calc(env(safe-area-inset-bottom,0px) + 20px));text-align:center;font-family:var(--f-body);font-weight:600;font-size:.95rem;letter-spacing:.12em;color:#2B0A0C;font-variant-numeric:tabular-nums}
+
+/* giant word that cycles under the hero */
+.home-words{grid-column:1/-1;min-width:0;max-width:100%;height:1em;overflow:hidden;font-family:var(--f-body);font-weight:900;text-transform:uppercase;font-size:clamp(3.2rem,15.5vw,13rem);line-height:1;letter-spacing:-.055em;color:var(--ink);margin-top:-.15em;pointer-events:none}
+.hw-track{display:flex;flex-direction:column;animation:hwcycle 10s cubic-bezier(.76,0,.24,1) 2s infinite}
+.hw-track span{display:block;height:1em;white-space:nowrap}
+.hw-track i{font-style:normal;color:var(--accent)}
+@keyframes hwcycle{0%,21%{transform:translateY(0)}25%,46%{transform:translateY(-1em)}50%,71%{transform:translateY(-2em)}75%,96%{transform:translateY(-3em)}100%{transform:translateY(-4em)}}
+
 /* home */
 .home{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:center;min-height:min(78vh,760px);padding-block:10px 30px}
 @media (max-width:860px){.home{grid-template-columns:minmax(0,1fr);min-height:0}}
@@ -228,7 +243,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
   animation:morph 9s ease-in-out infinite,fadeup 1.2s cubic-bezier(.16,1,.3,1) .35s both;box-shadow:0 40px 80px -40px rgba(60,0,10,.6)}
 @keyframes morph{0%,100%{border-radius:42% 58% 63% 37% / 41% 44% 56% 59%}25%{border-radius:58% 42% 38% 62% / 56% 38% 62% 44%}50%{border-radius:50% 50% 34% 66% / 62% 58% 42% 38%}75%{border-radius:36% 64% 56% 44% / 44% 62% 38% 56%}}
 .morph .kanri{width:62%;margin-top:6%}
-.ring{position:absolute;inset:4%;border:1.5px solid var(--k2);border-radius:50%;animation:spin 40s linear infinite,fadeup 1.2s .5s both}
+.ring{position:absolute;inset:4%;border:1.5px solid var(--k2);border-radius:50%;animation:fadeup 1.2s .5s both}
 @keyframes spin{to{transform:rotate(360deg)}}
 .fc{border-radius:18px;padding:12px 16px;box-shadow:0 18px 30px -18px rgba(40,0,10,.45);font-size:.82rem;font-weight:600;display:flex;flex-direction:column;gap:2px;animation:bob 6s ease-in-out infinite}
 .fc span{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:1.35rem;line-height:1.1}
@@ -421,6 +436,7 @@ h3{font-size:1.3rem;font-weight:600}
 </div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="ink-goo"><feGaussianBlur in="SourceGraphic" stdDeviation="9" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"/></filter></svg>
 <nav class="pager" id="pager" aria-label="Sections" hidden></nav>
+<div class="intro" id="intro" hidden aria-hidden="true"><div class="intro-stage"><div class="intro-ball" id="intro-ball"></div><div class="intro-line"></div></div><div class="intro-count" id="intro-count">0</div></div>
 <div class="veil b" id="veil-b" hidden></div>
 <div class="veil a" id="veil-a" hidden><div class="veil-m" id="veil-m"></div><div class="veil-txt" id="veil-txt"></div></div>
 
@@ -970,9 +986,10 @@ function buildView() {
         <div class="px" data-depth="14" style="inset:0"><div class="ring"></div></div>
         <div class="px" data-depth="26" style="inset:0"><div class="morph">${mascot("")}</div></div>
         <div class="px" data-depth="60" style="top:6%;left:-2%"><div class="fc k2 reveal" style="--d:.9s;animation:fadeup .9s cubic-bezier(.16,1,.3,1) .9s both,bob 6s ease-in-out 1.8s infinite"><small>Ventes</small><span>du mois</span></div></div>
-        <div class="px" data-depth="90" style="bottom:12%;right:-3%"><div class="fc k3" style="animation:fadeup .9s cubic-bezier(.16,1,.3,1) 1.05s both,bob 7s ease-in-out 2s infinite"><small>Prévision</small><span>7 jours</span></div></div>
+        <div class="px" data-depth="90" style="bottom:12%;right:0"><div class="fc k3" style="animation:fadeup .9s cubic-bezier(.16,1,.3,1) 1.05s both,bob 7s ease-in-out 2s infinite"><small>Prévision</small><span>7 jours</span></div></div>
         <div class="px" data-depth="40" style="bottom:2%;left:10%"><div class="fc k4" style="animation:fadeup .9s cubic-bezier(.16,1,.3,1) 1.2s both,bob 5.5s ease-in-out 2.2s infinite"><small>Conseil IA</small><span>Épargner</span></div></div>
       </div>
+      <div class="home-words reveal" style="--d:1.15s" aria-hidden="true"><div class="hw-track"><span>Vends<i>.</i></span><span>Compte<i>.</i></span><span>Prévois<i>.</i></span><span>Épargne<i>.</i></span><span>Vends<i>.</i></span></div></div>
     </section>`;
     return;
   }
@@ -1394,6 +1411,29 @@ $("#currency").addEventListener("change", e => {
   renderData();
 });
 $("#brand-mark").innerHTML = mascot("");
+function runIntro() {
+  let seen = false; try { seen = sessionStorage.getItem("kanri-intro") === "1"; sessionStorage.setItem("kanri-intro", "1"); } catch (e) {}
+  if (reduced || seen || S.view !== "home") return;
+  const el = $("#intro"), count = $("#intro-count"), ball = $("#intro-ball");
+  el.hidden = false; $("#main").classList.add("hold");
+  const t0 = performance.now(), dur = 1800;
+  let shown = 0;
+  const tick = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    const target = Math.round((1 - Math.pow(1 - p, 2)) * 100);
+    shown = (S.ready || now - t0 > 6000) ? target : Math.min(target, 92);
+    count.textContent = shown;
+    if (shown < 100) { requestAnimationFrame(tick); return; }
+    ball.style.animation = "none";
+    const r = ball.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const reach = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy));
+    ball.animate([{transform: "translateY(0) scale(1)"}, {transform: `translateY(0) scale(${(reach * 2.1) / r.width})`}], {duration: 900, easing: "cubic-bezier(.76,0,.24,1)", fill: "forwards"}).finished
+      .then(() => { $("#main").classList.remove("hold"); return el.animate([{opacity: 1}, {opacity: 0}], {duration: 500, easing: "ease-out", fill: "forwards"}).finished; })
+      .finally(() => { el.hidden = true; el.getAnimations().forEach(a => a.cancel()); ball.getAnimations().forEach(a => a.cancel()); ball.style.animation = ""; $("#main").classList.remove("hold"); });
+  };
+  requestAnimationFrame(tick);
+}
+runIntro();
 init();
 })();
 </script>
