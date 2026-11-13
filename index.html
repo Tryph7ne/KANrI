@@ -226,6 +226,32 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .sec-words{margin-top:10px;color:var(--ink);opacity:.92;font-size:min(10.6vw,9.4rem)}
 @media (prefers-reduced-motion:reduce){.orb{transform:translateY(-50%) scale(1)}}
 
+/* overview background film */
+.hero-film{position:absolute;inset:-40px 44% -20px 0;z-index:-1;opacity:var(--film-o,.16);pointer-events:none;overflow:hidden}
+.hero-film svg{width:100%;height:100%;display:block}
+.hero-film *{transform-box:fill-box}
+.f-arrow{transform-origin:50% 100%;animation:f-rise 7s cubic-bezier(.16,1,.3,1) infinite;animation-delay:calc(var(--i) * .18s)}
+@keyframes f-rise{0%{transform:scaleY(0)}28%{transform:scaleY(1)}82%{transform:scaleY(1);opacity:1}94%{transform:scaleY(1);opacity:0}100%{transform:scaleY(0);opacity:0}}
+.f-dash{animation:f-march 6s linear infinite}
+@keyframes f-march{to{stroke-dashoffset:-220}}
+.f-flick{transform-box:view-box;transform-origin:40px 412px;animation:f-flick 1.4s cubic-bezier(.5,0,.3,1) infinite}
+@keyframes f-flick{0%,15%{transform:rotate(0)}55%{transform:rotate(-46deg);opacity:1}62%{opacity:0}63%,100%{transform:rotate(0);opacity:0}}
+.f-flick{animation-name:f-flick}
+.f-thumb{transform-origin:50% 80%;animation:f-thumb 1.4s ease-in-out infinite}
+@keyframes f-thumb{0%,15%,70%,100%{transform:rotate(0)}45%{transform:rotate(-9deg)}}
+.f-tap{animation:f-tap 2.4s ease-in-out infinite}
+@keyframes f-tap{0%,100%{transform:translate(0,0)}12%{transform:translate(-6px,10px)}24%{transform:translate(0,0)}40%{transform:translate(-80px,-40px)}50%{transform:translate(-86px,-30px)}60%{transform:translate(-80px,-40px)}76%{transform:translate(-40px,30px)}86%{transform:translate(-46px,40px)}}
+.f-key.k12,.f-key.k21,.f-key.k33{animation:f-key 2.4s steps(1) infinite}
+.f-key.k21{animation-delay:.9s}.f-key.k33{animation-delay:1.7s}
+@keyframes f-key{0%{fill:#96A6C9}12%,100%{fill:#F7EDC4}}
+.f-num{opacity:0;animation:f-num 9.6s steps(1) infinite;animation-delay:calc(var(--n) * 2.4s)}
+@keyframes f-num{0%{opacity:1}25%,100%{opacity:0}}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .hero-film{--film-o:.3}}
+:root[data-theme="light"] .hero-film{--film-o:.3}
+@media (max-width:860px){.hero-film{right:0}}
+@media (max-width:760px){.hero-film{--film-o:.12}}
+@media (prefers-reduced-motion:reduce){.f-num{opacity:0}.f-num[style*="--n:3"]{opacity:1}}
+
 /* home */
 .home{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:center;min-height:min(78vh,760px);padding-block:10px 30px}
 @media (max-width:860px){.home{grid-template-columns:minmax(0,1fr);min-height:0}}
@@ -1011,7 +1037,7 @@ function buildView() {
     return;
   }
   if (S.view === "overview") {
-    m.innerHTML = sec(1, 4, "first", `<div class="hero rv" id="v-hero"></div><div class="home-words sec-words rv" style="--d:.9s" aria-hidden="true"><div class="hw-track"><span>Boutiques<i>.</i></span><span>Ventes<i>.</i></span><span>Commandes<i>.</i></span><span>Épargne<i>.</i></span><span>Boutiques<i>.</i></span></div></div>`, "sec-1")
+    m.innerHTML = sec(1, 4, "first", `<div class="hero-film" aria-hidden="true">${filmSvg()}</div><div class="hero rv" id="v-hero"></div><div class="home-words sec-words rv" style="--d:.9s" aria-hidden="true"><div class="hw-track"><span>Boutiques<i>.</i></span><span>Ventes<i>.</i></span><span>Commandes<i>.</i></span><span>Épargne<i>.</i></span><span>Boutiques<i>.</i></span></div></div>`, "sec-1")
       + sec(2, 4, "s-red", `<h2 class="statement">${words("Chaque vente *compte.*")}</h2><div id="v-kpis" class="rv" style="--d:.45s"></div>
           <div class="grid2"><div class="panel chart rv" style="--d:.6s" id="v-chart"></div><div class="panel rv" style="--d:.72s" id="v-table"></div></div>
           <div class="sec-mascot" aria-hidden="true">${mascot("wave")}</div>`, "sec-2")
@@ -1077,6 +1103,53 @@ function renderData() {
 const pad2 = n => String(n).padStart(2, "0");
 const sec = (n, total, cls, inner, id) => `<section class="sec ${cls}" id="${id}"><div class="sec-big" aria-hidden="true">${pad2(n)}</div><div class="sec-in"><div class="sec-num">${pad2(n)} <span>/ ${pad2(total)}</span></div>${inner}</div></section>`;
 const words = t => t.split(" ").map((w, i) => { const it = w.startsWith("*") && w.endsWith("*"); const c = esc(w.replace(/\*/g, "")); return `<span class="w"><span style="--i:${i}">${it ? `<em>${c}</em>` : c}</span></span>`; }).join(" ");
+/* Motion-design background: rising arrows, a hand counting banknotes, hands working a calculator. Flat colours only. */
+function filmSvg() {
+  const INK = "#2B0A0C", RED = "#6F050D", BLUE = "#96A6C9", BUTTER = "#F7EDC4", ROSE = "#EBDFD5";
+  const st = `stroke="${INK}" stroke-width="4" stroke-linejoin="round"`;
+  const arrows = [0, 1, 2, 3, 4].map(i => {
+    const x = 190 + i * 104, h = 150 + i * 66, w = 46, top = 560 - h;
+    return `<g class="f-arrow" style="--i:${i}"><rect x="${x}" y="${top + 40}" width="${w}" height="${h - 40}" fill="${BLUE}"/><path d="M${x - 24} ${top + 42} L${x + w / 2} ${top - 26} L${x + w + 24} ${top + 42} Z" fill="${BLUE}"/></g>`;
+  }).join("");
+  const bill = (rot, cls) => `<g class="${cls || ""}" transform="rotate(${rot} 40 150)"><rect x="40" y="70" width="180" height="82" rx="6" fill="${BUTTER}" stroke="${RED}" stroke-width="4"/><rect x="53" y="82" width="154" height="58" rx="4" fill="none" stroke="${RED}" stroke-width="2"/><circle cx="130" cy="111" r="19" fill="none" stroke="${RED}" stroke-width="3"/><text x="130" y="119" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-style="italic" font-weight="600" font-size="23" fill="${RED}">k</text></g>`;
+  const finger = (x, y, w, h, rot, ox, oy) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w, h) / 2}" fill="${ROSE}" ${st}${rot ? ` transform="rotate(${rot} ${ox} ${oy})"` : ""}/>`;
+  const keys = [];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) keys.push(`<rect class="f-key k${r}${c}" x="${20 + c * 38}" y="${112 + r * 36}" width="28" height="26" rx="5" fill="${BUTTER}"/>`);
+  const shows = ["1 250", "3 480", "7 905", "12 640"].map((t, i) => `<text class="f-num" style="--n:${i}" x="158" y="76" text-anchor="end" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="${INK}">${t}</text>`).join("");
+  return `<svg viewBox="0 0 800 560" preserveAspectRatio="xMidYMax meet" focusable="false">
+  <defs><pattern id="f-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="${ROSE}" stroke-width="1"/></pattern></defs>
+  <rect x="150" y="70" width="560" height="490" fill="url(#f-grid)" opacity=".5"/>
+  <path class="f-dash" d="M20 150 C 140 50, 250 230, 400 120 S 640 40, 780 140" fill="none" stroke="${ROSE}" stroke-width="3" stroke-dasharray="10 12"/>
+  ${arrows}
+  <!-- left: a hand gripping a fan of banknotes, the thumb flicks the front one -->
+  <g transform="translate(0 262)">
+    <rect x="70" y="236" width="92" height="120" fill="${ROSE}" ${st}/>
+    ${bill(-36)}${bill(-22)}${bill(-8)}${bill(6, "f-flick")}
+    <rect x="44" y="150" width="142" height="104" rx="40" fill="${ROSE}" ${st}/>
+    ${finger(118, 128, 78, 30)}${finger(122, 158, 80, 30)}${finger(120, 188, 76, 30)}${finger(112, 216, 66, 28)}
+    <g class="f-thumb">${finger(30, 92, 40, 92, -30, 50, 138)}</g>
+  </g>
+  <!-- right: one hand holds the calculator, the other points and taps -->
+  <g transform="translate(548 236) scale(.86)">
+    <rect x="-20" y="262" width="104" height="120" fill="${ROSE}" ${st}/>
+    <rect x="-34" y="200" width="146" height="106" rx="44" fill="${ROSE}" ${st}/>
+    <g>
+      <rect x="0" y="0" width="180" height="268" rx="20" fill="${RED}" ${st}/>
+      <rect x="18" y="34" width="144" height="56" rx="8" fill="${BLUE}"/>
+      ${shows}
+      ${keys.join("")}
+    </g>
+    ${finger(-30, 96, 50, 30)}${finger(-32, 132, 52, 30)}${finger(-30, 168, 50, 30)}
+    <g class="f-tap">
+      <rect x="250" y="206" width="220" height="86" fill="${ROSE}" ${st}/>
+      <rect x="168" y="176" width="116" height="100" rx="38" fill="${ROSE}" ${st}/>
+      <path d="M196 206 h56 M196 232 h60 M200 256 h50" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+      ${finger(82, 168, 120, 32)}
+      ${finger(196, 150, 40, 70, -20, 216, 185)}
+    </g>
+  </g>
+</svg>`;
+}
 const heroWords = t => t.split(" ").map((w, i) => { const it = w.startsWith("*") && w.endsWith("*"); const c = esc(w.replace(/\*/g, "")); return `<span class="w"><span style="--i:${i}">${it ? `<span class="hl">${c}</span>` : c}</span></span>`; }).join(" ");
 let secObs = null;
 function setupSections() {
